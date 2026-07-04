@@ -120,10 +120,15 @@ object FileDirectory {
                 targetFile = File(context.cacheDir, "${prefix}_${Date().time}.$type")
             }
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(targetFile).use { fileOut ->
-                    input.copyTo(fileOut)
+            try {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(targetFile).use { fileOut ->
+                        input.copyTo(fileOut)
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e("FileDirectory", "Failed to open input stream for uri: $uri", e)
+                return null
             }
             return targetFile.path
         }

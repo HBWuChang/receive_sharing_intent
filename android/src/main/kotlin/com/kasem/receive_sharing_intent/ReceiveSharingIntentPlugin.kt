@@ -186,7 +186,11 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         this.binding = binding
         binding.addOnNewIntentListener(this)
-        handleIntent(binding.activity.intent, true)
+        try {
+            handleIntent(binding.activity.intent, true)
+        } catch (e: Exception) {
+            android.util.Log.e("ReceiveSharingIntent", "Error handling initial intent", e)
+        }
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -203,7 +207,11 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
     }
 
     override fun onNewIntent(intent: Intent): Boolean {
-        handleIntent(intent, false)
+        try {
+            handleIntent(intent, false)
+        } catch (e: Exception) {
+            android.util.Log.e("ReceiveSharingIntent", "Error handling new intent", e)
+        }
         return false
     }
 

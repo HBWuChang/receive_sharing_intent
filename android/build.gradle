@@ -1,24 +1,21 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+group 'com.kasem.receive_sharing_intent'
+version '1.9.0'
 
 buildscript {
-    ext.kotlin_version = '2.4.0'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:9.2.1'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.android.tools.build:gradle:8.9.1'
     }
 }
 
 plugins {
     id "com.android.library"
+    id "org.jetbrains.kotlin.android"
 }
-
-group 'com.kasem.receive_sharing_intent'
-version '1.9.0'
 
 rootProject.allprojects {
     repositories {
@@ -32,27 +29,27 @@ android {
         namespace 'com.kasem.receive_sharing_intent'
     }
 
+    compileSdk 36
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
+
     defaultConfig {
-        compileSdk 37
         minSdkVersion 21
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
+
     lintOptions {
         disable 'InvalidPackage'
     }
 }
-
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
-    }
-}
-

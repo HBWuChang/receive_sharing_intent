@@ -140,6 +140,11 @@ class ReceiveSharingIntentPlugin : FlutterPlugin, ActivityAware, MethodCallHandl
     private fun toJsonObject(uri: Uri?, text: String?, mimeType: String?): JSONObject? {
         val path = uri?.let { FileDirectory.getAbsolutePath(applicationContext, it) }
         val mType = mimeType ?: path?.let { URLConnection.guessContentTypeFromName(path) }
+        // If neither a file path nor text is available, the item is unusable → skip it.
+        if (path == null && text == null) {
+            android.util.Log.w("ReceiveSharingIntent", "Skipping share item: no resolvable path or text for uri=$uri")
+            return null
+        }
         val type = MediaType.fromMimeType(mType)
         val (thumbnail, duration) = path?.let { getThumbnailAndDuration(path, type) }
                 ?: Pair(null, null)

@@ -31,7 +31,7 @@ class SharedMediaFile {
   });
 
   SharedMediaFile.fromMap(Map<String, dynamic> json)
-      : path = json['path'],
+      : path = json['path'] as String? ?? '',
         thumbnail = json['thumbnail'],
         duration = json['duration'],
         type = SharedMediaType.fromValue(json['type']),

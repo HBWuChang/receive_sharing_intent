@@ -128,6 +128,23 @@ object FileDirectory {
                 }
             } catch (e: Exception) {
                 Log.e("FileDirectory", "Failed to open input stream for uri: $uri", e)
+                // Fallback: many apps use private FileProviders whose content URI
+                // embeds the real file path but cannot be resolved externally.
+                // Try multiple strategies to reconstruct the path.
+                try {
+                    val resolvedFile = resolveFileFromUriPath(uri)
+                    if (resolvedFile != null) {
+                        Log.i("FileDirectory", "Fallback: resolved real path ${resolvedFile.absolutePath}")
+                        resolvedFile.inputStream().use { input ->
+                            FileOutputStream(targetFile).use { fileOut ->
+                                input.copyTo(fileOut)
+                            }
+                        }
+                        return targetFile.path
+                    }
+                } catch (e2: Exception) {
+                    Log.e("FileDirectory", "Fallback also failed for uri: $uri", e2)
+                }
                 return null
             }
             return targetFile.path
@@ -172,5 +189,42 @@ object FileDirectory {
      */
     fun isMediaDocument(uri: Uri): Boolean {
         return "com.android.providers.media.documents" == uri.authority
+    }
+
+    /**
+     * Resolve a real file path from a content URI's path segment.
+     *
+     * Many apps (QQ, MT Manager, MIUI gallery) use private FileProviders;
+     * when [openInputStream] on such URIs fails, the real file path is often
+     * embedded in [uri.path] but prefixed with a virtual directory name
+     * like `/external_files/`, `/root/`, `/external/`, etc.
+     *
+     * Strategies tried (in order):
+     *  1. Use [uri.path] as-is (works for e.g. MT Manager).
+     *  2. Strip the first path segment (e.g. `/external_files/rest` → `/rest`).
+     *  3. Strip first segment + prepend external storage directory.
+     */
+    private fun resolveFileFromUriPath(uri: Uri): File? {
+        val segments = uri.pathSegments
+        if (segments.isEmpty()) return null
+
+        // Strategy 1: raw path
+        val rawFile = File(uri.path ?: "")
+        if (rawFile.exists()) return rawFile
+
+        if (segments.size < 2) return null
+
+        // Path without the first virtual segment (e.g. remove /external_files/)
+        val restPath = segments.subList(1, segments.size).joinToString("/")
+
+        // Strategy 2: treat rest as absolute (root-based) path
+        val absFile = File("/$restPath")
+        if (absFile.exists()) return absFile
+
+        // Strategy 3: prepend external storage root
+        val extFile = File(Environment.getExternalStorageDirectory(), restPath)
+        if (extFile.exists()) return extFile
+
+        return null
     }
 }

@@ -16,14 +16,36 @@ class ReceiveSharingIntentMobile extends ReceiveSharingIntent {
 
   static Stream<List<SharedMediaFile>>? _streamMedia;
 
+  /// Helper: decode JSON array of share items, skip entries with no path.
+  List<SharedMediaFile> _safeDecode(String json) {
+    try {
+      final encoded = jsonDecode(json) as List<dynamic>;
+      final result = <SharedMediaFile>[];
+      for (final item in encoded) {
+        if (item is! Map) continue;
+        if (item['path'] == null) {
+          debugPrint('[receive_sharing_intent] Skipping share item: path is null');
+          continue;
+        }
+        result.add(SharedMediaFile.fromMap(item.cast<String, dynamic>()));
+      }
+      return result;
+    } catch (e, st) {
+      debugPrint('[receive_sharing_intent] Failed to decode share data: $e\n$st');
+      return [];
+    }
+  }
+
   @override
   Future<List<SharedMediaFile>> getInitialMedia() async {
-    final json = await mChannel.invokeMethod('getInitialMedia');
-    if (json == null) return [];
-    final encoded = jsonDecode(json);
-    return encoded
-        .map<SharedMediaFile>((file) => SharedMediaFile.fromMap(file))
-        .toList();
+    try {
+      final json = await mChannel.invokeMethod('getInitialMedia');
+      if (json == null) return [];
+      return _safeDecode(json as String);
+    } catch (e, st) {
+      debugPrint('[receive_sharing_intent] getInitialMedia failed: $e\n$st');
+      return [];
+    }
   }
 
   @override
@@ -36,11 +58,12 @@ class ReceiveSharingIntentMobile extends ReceiveSharingIntent {
             if (data == null) {
               sink.add(<SharedMediaFile>[]);
             } else {
-              final encoded = jsonDecode(data);
-              sink.add(encoded
-                  .map<SharedMediaFile>((file) => SharedMediaFile.fromMap(file))
-                  .toList());
+              sink.add(_safeDecode(data));
             }
+          },
+          handleError: (error, stack, sink) {
+            debugPrint('[receive_sharing_intent] Stream error: $error\n$stack');
+            sink.add(<SharedMediaFile>[]);
           },
         ),
       );
